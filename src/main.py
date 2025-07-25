@@ -23,7 +23,7 @@ def main():
 
     pygame.init()
     pygame.font.init()
-    screen = pygame.display.set_mode((1280, 720))
+
     pygame.display.set_caption("BattleCubes")
 
     
@@ -31,7 +31,9 @@ def main():
     pygame.display.gl_set_attribute(pygame.GL_DEPTH_SIZE, 32)
 
     # Create an OpenGL-enabled, double-buffered window
-    pygame.display.set_mode((800, 600), OPENGL | DOUBLEBUF)
+    screen = pygame.display.set_mode((800, 600), OPENGL | DOUBLEBUF)
+    max_tex = glGetIntegerv(GL_MAX_TEXTURE_SIZE)
+    print("GL_MAX_TEXTURE_SIZE =", max_tex)
 
     # Turn on depth testing (optional but typical)
     glEnable(GL_DEPTH_TEST)

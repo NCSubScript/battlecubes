@@ -2,16 +2,20 @@ import sys
 import pygame
 
 class SplashScreen:
-    def __init__(self, screen, image_paths, fade_duration=1000, display_duration=5000):
+    def __init__(self, screen, image_paths, fade_duration=1000, display_duration=5000, debug=False):
         self.screen = screen
         self.images = image_paths
-        self.fd = fade_duration     # milliseconds
-        self.dd = display_duration  # milliseconds
+        self.fd = fade_duration
+        self.dd = display_duration
         self.clock = pygame.time.Clock()
+        self.debug = debug
 
     def run(self):
-        w, h = self.screen.get_size()
+        if self.debug:
+            print("Debug mode: Skipping splash screens")
+            return
 
+        w, h = self.screen.get_size()
         for path in self.images:
             img = pygame.image.load(path).convert_alpha()
             img = pygame.transform.smoothscale(img, (w, h))

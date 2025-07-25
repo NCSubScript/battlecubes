@@ -1,0 +1,3 @@
+pygame
+steamworks
+# add other dependencies here

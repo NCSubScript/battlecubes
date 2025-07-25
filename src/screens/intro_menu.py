@@ -1,5 +1,6 @@
 import sys
 import pygame
+from pygame.locals import *
 from .gl_renderer import GLRenderer
 from OpenGL.GL import *
 
@@ -24,6 +25,7 @@ class IntroMenu:
         clock = pygame.time.Clock()
 
         while True:
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
             for ev in pygame.event.get():
                 if ev.type == pygame.QUIT:
                     pygame.quit()
@@ -39,6 +41,7 @@ class IntroMenu:
             # 1. Draw 2D background
             # Must clear depth only, so our background remains
             glClear(GL_DEPTH_BUFFER_BIT)
+            glDepthMask(GL_FALSE)
             self.screen.blit(self.bg, (0, 0))
 
             # 2. Draw 3D object (cube)
@@ -52,6 +55,8 @@ class IntroMenu:
                 y = self.h // 2 + idx * 60
                 self.screen.blit(surf, (x, y))
 
+            glDepthMask(GL_TRUE)  # Re-enable depth writing
+            glFlush()  # Ensure OpenGL commands are executed
             # Swap buffers
             pygame.display.flip()
             clock.tick(60)

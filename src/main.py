@@ -1,6 +1,8 @@
 import sys
 import argparse
 import pygame
+from pygame.locals import *
+from OpenGL.GL import *
 
 from screens.splash_screen   import SplashScreen
 from screens.loading_screen  import LoadingScreen
@@ -23,6 +25,16 @@ def main():
     pygame.font.init()
     screen = pygame.display.set_mode((1280, 720))
     pygame.display.set_caption("BattleCubes")
+
+    
+    # Ask for 24 bits of depth precision
+    pygame.display.gl_set_attribute(pygame.GL_DEPTH_SIZE, 32)
+
+    # Create an OpenGL-enabled, double-buffered window
+    pygame.display.set_mode((800, 600), OPENGL | DOUBLEBUF)
+
+    # Turn on depth testing (optional but typical)
+    glEnable(GL_DEPTH_TEST)
 
     # 1. Splash — skip if debug
     splash = SplashScreen(

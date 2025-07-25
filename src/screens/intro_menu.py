@@ -29,38 +29,44 @@ class IntroMenu:
             self.textures.append((surf.get_width(), surf.get_height(), tex))
 
     def _surface_to_texture(self, surf):
-
-        w, h = surf.get_size()
-        data = pygame.image.tostring(surf, "RGBA", True)
-        print(f"Uploading texture: {w}×{h}, data bytes: {len(data)}, expected: {w*h*4}")
-        
-        """
-        Upload a Pygame surface to an OpenGL texture.
-        Ensures the surface is 32-bit RGBA and sets unpack alignment.
-        """
-        # 1) Make sure we have an alpha channel
+        # ensure RGBA
         surf = surf.convert_alpha()
+        orig_w, orig_h = surf.get_size()
 
-        # 2) Flip & grab raw bytes in RGBA order
-        data = pygame.image.tostring(surf, "RGBA", True)
+        # query GPU limit
+        max_tex = glGetIntegerv(GL_MAX_TEXTURE_SIZE)
+
+        # if over limit, compute a uniform scale factor
+        if orig_w > max_tex or orig_h > max_tex:
+            scale = min(max_tex / orig_w, max_tex / orig_h)
+            new_w = int(orig_w * scale)
+            new_h = int(orig_h * scale)
+            surf = pygame.transform.smoothscale(surf, (new_w, new_h))
+
+        # grab raw data and dimensions
         w, h = surf.get_size()
+        data = pygame.image.tostring(surf, "RGBA", True)
+        assert len(data) == w * h * 4, "data size mismatch!"
 
-        # 3) Create & bind the GL texture
+        # upload texture
         tex = glGenTextures(1)
         glBindTexture(GL_TEXTURE_2D, tex)
-
-        # 4) Ensure rows are byte-aligned
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
+        glPixelStorei(GL_UNPACK_ROW_LENGTH,    0)
+        glPixelStorei(GL_UNPACK_SKIP_PIXELS,   0)
+        glPixelStorei(GL_UNPACK_SKIP_ROWS,     0)
 
-        # 5) Set our filters
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-
-        # 6) Upload!  Now width/height and format/type match our data exactly.
+        # use a sized internal format
         glTexImage2D(
-            GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
+            GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0,
             GL_RGBA, GL_UNSIGNED_BYTE, data
         )
+
+        # filters & wrap
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     GL_CLAMP_TO_EDGE)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,     GL_CLAMP_TO_EDGE)
 
         return tex
 

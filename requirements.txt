@@ -1,3 +1,5 @@
-pygame
 steamworks
-# add other dependencies here
+pygame>=2.0
+moderngl>=5.7
+numpy
+

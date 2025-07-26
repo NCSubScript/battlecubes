@@ -1,41 +1,88 @@
-# main.py
+import sys
+import pygame
+import moderngl
 
-import pygame, moderngl, sys
 from resource_manager import ResourceManager
 from scenes.splash_screen import SplashScreen
 from scenes.loading_screen import LoadingScreen
-from scenes.intro_menu    import IntroMenu  # unchanged
+from scenes.intro_menu    import IntroMenu
+from scenes.single        import SinglePlayerScene  # ← new
 
 # resolution
 SCREEN_WIDTH  = 1024
 SCREEN_HEIGHT = 768
 
 pygame.init()
+#
+# 1) Request core-profile GL 3.3 + a 24-bit depth buffer *before* you open the window
+pygame.display.gl_set_attribute(pygame.GL_CONTEXT_MAJOR_VERSION, 3)
+pygame.display.gl_set_attribute(pygame.GL_CONTEXT_MINOR_VERSION, 3)
+pygame.display.gl_set_attribute(
+    pygame.GL_CONTEXT_PROFILE_MASK,
+    pygame.GL_CONTEXT_PROFILE_CORE
+)
+pygame.display.gl_set_attribute(pygame.GL_DEPTH_SIZE, 24)
+
 screen = pygame.display.set_mode(
     (SCREEN_WIDTH, SCREEN_HEIGHT),
     pygame.OPENGL | pygame.DOUBLEBUF
 )
-ctx = moderngl.create_context()
-rm  = ResourceManager(ctx)
+
+ctx   = moderngl.create_context()
+rm    = ResourceManager(ctx)
 clock = pygame.time.Clock()
 
 loading_screen: LoadingScreen
 
+def start_intro_menu():
+    global current_scene
+    current_scene = IntroMenu(
+        ctx          = ctx,
+        resource_mgr = rm,
+        background_key= "menu_bg",
+        font_key     = ("font_bold", 24),
+        menu_items   = ["Single Player", "Multiplayer", "Learn", "Options", "Exit"],
+        callbacks    = [on_single, on_multi, on_learn, on_options, on_exit],
+        render_3d    = render_placeholder_3d
+    )
+
+def start_loading():
+    global current_scene, loading_screen
+    manifest = [
+        ("image", "menu_bg",   "assets/images/menu_bg.png"),
+        ("font",  "font_thin", "assets/fonts/Kubus-Thin.ttf", 24),
+        ("font",  "font_bold", "assets/fonts/Kubus-Bold.ttf", 24),
+    ]
+    loading_screen = LoadingScreen(
+        ctx            = ctx,
+        screen_size    = (SCREEN_WIDTH, SCREEN_HEIGHT),
+        resource_mgr   = rm,
+        asset_manifest = manifest,
+        on_complete    = start_intro_menu
+    )
+    current_scene = loading_screen
+
 def on_single():
-        print("→ Single Player")
-        # swap to SinglePlayerScene
+    print("→ Single Player")
+    # swap to SinglePlayerScene
+    global current_scene
+    current_scene = SinglePlayerScene(
+        ctx          = ctx,
+        screen_size  = (SCREEN_WIDTH, SCREEN_HEIGHT),
+        resource_mgr = rm,
+    )
 
 def on_multi():
     print("→ Multiplayer")
-    # swap to MultiplayerScene
+    # …
 
 def on_learn():
     print("→ Learn")
-    # swap to TutorialsScene
+    # …
 
 def on_options():
     print("→ Options")
-    # swap to OptionsScene
+    # …
 
 def on_exit():
     pygame.quit()
@@ -43,41 +90,9 @@ def on_exit():
 
 # Placeholder 3D render callback
 def render_placeholder_3d(ctx):
-    # Clear depth, set viewport, draw your 3D model here
-    # e.g., mgl_ctx.clear(0.1, 0.1, 0.1)
     pass
 
-def start_intro_menu():
-    global current_scene
-    
-    current_scene = IntroMenu(
-        ctx         = ctx,
-        resource_mgr = rm,
-        background_key  = "menu_bg",
-        font_key   = ("font_bold", 24),
-        menu_items=["Single Player", "Multiplayer", "Learn", "Options", "Exit"],
-        callbacks=[on_single, on_multi, on_learn, on_options, on_exit],
-        render_3d=render_placeholder_3d
-    )
-
-def start_loading():
-    global current_scene, loading_screen
-
-    manifest = [
-        ("image", "menu_bg",   "assets/images/menu_bg.png"),
-        ("font",  "font_thin", "assets/fonts/Kubus-Thin.ttf", 24),
-        ("font",  "font_bold", "assets/fonts/Kubus-Bold.ttf", 24),
-    ]
-
-    loading_screen = LoadingScreen(
-        ctx         = ctx,
-        screen_size = (SCREEN_WIDTH, SCREEN_HEIGHT),
-        resource_mgr= rm,
-        asset_manifest= manifest,
-        on_complete = start_intro_menu
-    )
-    current_scene = loading_screen
-
+# start at splash screen
 current_scene = SplashScreen(
     ctx          = ctx,
     screen_size  = (SCREEN_WIDTH, SCREEN_HEIGHT),

@@ -1,95 +1,78 @@
 # scenes/loading_screen.py
 
 import pygame
-from pygame import Surface
 from typing import List, Tuple, Optional, Callable, Any
+from gl_ui   import GLUI
+from resource_manager import ResourceManager
 
 class LoadingScreen:
     """
-    Sequentially loads assets via a provided ResourceManager.
-    asset_manifest entries are tuples:
-      - ("image", key,  path)
-      - ("sound", key,  path)
-      - ("font",  key,  path, [size])
-    Calls on_complete() when done.
+    Loads assets via ResourceManager, shows a GL‐drawn progress bar.
     """
 
     def __init__(
         self,
-        screen: Surface,
-        resource_mgr: Any,
+        ctx,
+        screen_size: tuple,
+        resource_mgr: ResourceManager,
         asset_manifest: List[Tuple],
         on_complete: Optional[Callable] = None
     ):
-        self.screen      = screen
-        self.rm          = resource_mgr
-        self.manifest    = asset_manifest[:]
+        self.ctx   = ctx
+        self.ui    = GLUI(ctx)
+        self.w, self.h = screen_size
+        self.rm    = resource_mgr
+        self.man   = asset_manifest[:]
         self.on_complete = on_complete
 
-        # Progress counters
-        self.total  = len(self.manifest)
+        self.total  = len(self.man)
         self.loaded = 0
-
-        # Precompute bar geometry
-        self.width, self.height = screen.get_size()
-        self.bar_w, self.bar_h = int(self.width * 0.6), 30
-        self.bar_x = (self.width  - self.bar_w) // 2
-        self.bar_y = (self.height - self.bar_h) // 2
+        self.done   = False
 
     def update(self, events):
-        # If there are assets left, load one per frame
         if self.loaded < self.total:
-            entry = self.manifest[self.loaded]
+            entry = self.man[self.loaded]
             kind  = entry[0].lower()
-
             try:
-                if kind == "image":
+                if kind == 'image':
                     _, key, path = entry
                     self.rm.load_image(key, path)
+                    self.rm.load_texture(key, path)
 
-                elif kind == "sound":
+                elif kind == 'sound':
                     _, key, path = entry
                     self.rm.load_sound(key, path)
 
-                elif kind == "font":
-                    # entry = ("font", key, path, size?) 
-                    if len(entry) == 4:
-                        _, key, path, size = entry
-                        self.rm.load_font(key, path, size)
-                    else:
-                        _, key, path     = entry
-                        self.rm.load_font(key, path)
+                elif kind == 'font':
+                    _, key, path, size = entry
+                    self.rm.load_font(key, path, size)
 
                 else:
-                    print(f"[LoadingScreen] Unknown asset kind '{kind}'")
+                    print(f"[Loading] unknown kind {kind}")
             except Exception as e:
-                print(f"[LoadingScreen] Failed to load {entry}: {e!r}")
+                print(f"[Loading] failed {entry}: {e}")
             finally:
                 self.loaded += 1
 
-        # All done?
-        elif self.on_complete:
-            # call back once, then drop it
-            self.on_complete()
-            self.on_complete = None
+        elif not self.done:
+            self.done = True
+            if self.on_complete:
+                self.on_complete()
 
     def draw(self):
-        self.screen.fill((30, 30, 30))
+        # clear to dark grey
+        self.ctx.clear(0.1, 0.1, 0.1, 1.0)
+
+        # draw outer bar
+        bar_w, bar_h = self.w * 0.6, 30
+        x0 = (self.w - bar_w) / 2
+        y0 = (self.h - bar_h) / 2
 
         # border
-        pygame.draw.rect(
-            self.screen,
-            (200, 200, 200),
-            (self.bar_x, self.bar_y, self.bar_w, self.bar_h),
-            2
-        )
-
+        self.ui.draw_rect(x0 - 2, y0 - 2, bar_w + 4, bar_h + 4, (200,200,200))
         # fill
         if self.total:
             pct = self.loaded / self.total
-            fill_w = int((self.bar_w - 4) * pct)
-            pygame.draw.rect(
-                self.screen,
-                (100, 200, 100),
-                (self.bar_x + 2, self.bar_y + 2, fill_w, self.bar_h - 4)
-            )
+        else:
+            pct = 1.0
+        self.ui.draw_rect(x0, y0, bar_w*pct, bar_h, (100,200,100))

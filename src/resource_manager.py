@@ -31,10 +31,10 @@ class ResourceManager:
 
     #── Images ----------------------------------------------------------------
 
-    def load_image(self, key: str, path: str) -> pygame.Surface:
+    def load_image(self, key: str, path: str = "") -> pygame.Surface:
         """Load and cache a pygame.Surface with alpha."""
-        if path in self._images:
-            return self._images[path]
+        if key in self._images:
+            return self._images[key]
 
         if not os.path.exists(path):
             logger.error(f"Image not found: {path}")
@@ -52,7 +52,7 @@ class ResourceManager:
 
     def load_sound(self, key: str, path: str) -> pygame.mixer.Sound:
         """Load and cache a Sound."""
-        if path in self._sounds:
+        if key in self._sounds:
             return self._sounds[path]
 
         if not os.path.exists(path):
@@ -71,7 +71,7 @@ class ResourceManager:
 
     def load_font(self, key: str, path: str, size: int) -> pygame.font.Font:
         """Load and cache a Font by (path, size)."""
-        key = (path, size)
+        key = (key, size)
         if key in self._fonts:
             return self._fonts[key]
 
@@ -80,37 +80,41 @@ class ResourceManager:
             raise FileNotFoundError(path)
 
         font = pygame.font.Font(path, size)
-        self._fonts[key] = {size: font}
+        self._fonts[key] = font
         logger.info(f"Loaded font: {path}@{size}")
         return font
 
-    def get_font(self, key, size) -> pygame.font.Font:
-        return self._fonts[key][size]
+    def get_font(self, key) -> pygame.font.Font:
+        return self._fonts[key]
 
+    def get_font(self, key, size) -> pygame.font.Font:
+        return self._fonts[(key, size)]
+    
+    
     #── GPU Textures ----------------------------------------------------------
 
-    def load_texture(self, path: str, build_mipmaps: bool = True) -> moderngl.Texture:
+    def load_texture(self, key, path: str = "", build_mipmaps: bool = True) -> moderngl.Texture:
         """
         Load a pygame.Surface, upload to GPU as RGBA texture,
         generate mipmaps if requested.
         """
-        if path in self._textures:
-            return self._textures[path]
+        if key in self._textures:
+            return self._textures[key]
 
-        surf = self.load_image(path)  # ensures PNG→Surface
+        surf = self.load_image(key)  # ensures PNG→Surface
         w, h = surf.get_size()
         data = pygame.image.tostring(surf, 'RGBA', False)
 
         tex = self.ctx.texture((w, h), 4, data)
         if build_mipmaps:
             tex.build_mipmaps()
-        self._textures[path] = tex
+        self._textures[key] = tex
 
         logger.info(f"Created GPU texture: {path} ({w}×{h})")
         return tex
 
-    def get_texture(self, path: str) -> moderngl.Texture:
-        return self.load_texture(path)
+    def get_texture(self, key: str) -> moderngl.Texture:
+        return self.load_texture(key)
 
     #── Shaders / Programs ---------------------------------------------------
 
